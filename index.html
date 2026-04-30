@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Atman — Your memories you will never lose.</title>
+        <meta
+            name="description"
+            content="Atman Project — Software shifts. Your data shouldn’t. Keep what matters."
+        />
+        <link rel="icon" type="image/png" href="/favicon.png" />
+        <style>
+            :root {
+                color-scheme: light dark;
+                --bg: #fafaf7;
+                --fg: #111;
+                --muted: #666;
+                --rule: #e5e5e0;
+            }
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --bg: #0d0d0d;
+                    --fg: #f0efea;
+                    --muted: #888;
+                    --rule: #222;
+                }
+            }
+            * {
+                box-sizing: border-box;
+            }
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                background: var(--bg);
+                color: var(--fg);
+                font-family: ui-serif, Georgia, "Times New Roman", serif;
+                font-size: 18px;
+                line-height: 1.6;
+                min-height: 100dvh;
+                display: grid;
+                place-items: center;
+                padding: 2rem;
+            }
+            main {
+                max-width: 36rem;
+                width: 100%;
+            }
+            h1 {
+                font-size: clamp(2.5rem, 6vw, 4rem);
+                font-weight: 500;
+                letter-spacing: -0.02em;
+                margin: 0 0 0.5rem;
+            }
+            .tagline {
+                color: var(--muted);
+                font-style: italic;
+                margin: 0 0 2.5rem;
+            }
+            .creed {
+                font-size: 1.15rem;
+                line-height: 1.5;
+                margin: 0;
+            }
+            .creed span {
+                display: block;
+            }
+            .creed .strong {
+                color: var(--fg);
+            }
+            .creed .muted {
+                color: var(--muted);
+            }
+            h2 {
+                font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                font-size: 0.8rem;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 0.12em;
+                color: var(--muted);
+                margin: 0 0 1rem;
+            }
+            hr {
+                border: 0;
+                border-top: 1px solid var(--rule);
+                margin: 2.25rem 0;
+            }
+            .values {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            .values li {
+                display: block;
+                margin: 0 0 1rem;
+            }
+            .values li:last-child {
+                margin-bottom: 0;
+            }
+            .values .name {
+                display: block;
+            }
+            .values .desc {
+                display: block;
+                color: var(--muted);
+                font-size: 0.95rem;
+                font-style: italic;
+            }
+            .projects {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+                font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                font-size: 0.95rem;
+            }
+            .projects li {
+                margin: 0.4rem 0;
+                display: flex;
+                gap: 0.75rem;
+            }
+            .projects li .key {
+                color: var(--muted);
+                flex: 0 0 7rem;
+            }
+            a {
+                color: inherit;
+                text-decoration: underline;
+                text-underline-offset: 3px;
+            }
+            a:hover {
+                color: var(--muted);
+            }
+            footer {
+                margin-top: 2.5rem;
+                font-size: 0.85rem;
+                color: var(--muted);
+                font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>atman</h1>
+            <p class="tagline">Your memories you will never lose.</p>
+
+            <p class="creed">
+                <span class="muted">Software shifts.</span>
+                <span class="muted">Your data shouldn’t.</span>
+                <span class="strong">Keep what matters.</span>
+            </p>
+
+            <hr />
+
+            <h2>Values</h2>
+            <ul class="values">
+                <li>
+                    <span class="name">Local-first software</span>
+                    <span class="desc"
+                        >Stay with data, shift the software.</span
+                    >
+                </li>
+                <li>
+                    <span class="name">Malleable software</span>
+                    <span class="desc"
+                        >Simple tools, infinite composability — from docs to
+                        apps.</span
+                    >
+                </li>
+                <li>
+                    <span class="name">Version control</span>
+                    <span class="desc"
+                        >History for everything, across all software.</span
+                    >
+                </li>
+                <li>
+                    <span class="name">Data ownership</span>
+                    <span class="desc">Own and prove your data.</span>
+                </li>
+            </ul>
+
+            <hr />
+
+            <h2>Projects</h2>
+            <ul class="projects">
+                <li>
+                    <span class="key">atman</span>
+                    <a href="https://github.com/atman-project/atman"
+                        >universal peer-to-peer sync engine</a
+                    >
+                </li>
+                <li>
+                    <span class="key">blacksmith</span>
+                    <a href="https://github.com/atman-project/blacksmith"
+                        >doc-to-app framework</a
+                    >
+                </li>
+            </ul>
+        </main>
+    </body>
+</html>
