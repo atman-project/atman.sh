@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Beam — Share without the cloud.</title>
+        <meta
+            name="description"
+            content="Beam — Share photos, videos, and files directly between devices. No accounts, no servers, end-to-end encrypted."
+        />
+        <link rel="icon" type="image/png" href="/favicon.png" />
+        <style>
+            :root {
+                color-scheme: light dark;
+                --bg: #fafaf7;
+                --fg: #111;
+                --muted: #666;
+                --rule: #e5e5e0;
+            }
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --bg: #0d0d0d;
+                    --fg: #f0efea;
+                    --muted: #888;
+                    --rule: #222;
+                }
+            }
+            * {
+                box-sizing: border-box;
+            }
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            body {
+                background: var(--bg);
+                color: var(--fg);
+                font-family: ui-serif, Georgia, "Times New Roman", serif;
+                font-size: 18px;
+                line-height: 1.6;
+                min-height: 100dvh;
+                display: grid;
+                place-items: center;
+                padding: 2rem;
+            }
+            main {
+                max-width: 36rem;
+                width: 100%;
+            }
+            h1 {
+                font-size: clamp(2.5rem, 6vw, 4rem);
+                font-weight: 500;
+                letter-spacing: -0.02em;
+                margin: 0 0 0.5rem;
+            }
+            .tagline {
+                color: var(--muted);
+                font-style: italic;
+                margin: 0 0 2.5rem;
+            }
+            .creed {
+                font-size: 1.15rem;
+                line-height: 1.5;
+                margin: 0;
+            }
+            .creed span {
+                display: block;
+            }
+            .creed .strong {
+                color: var(--fg);
+            }
+            .creed .muted {
+                color: var(--muted);
+            }
+            h2 {
+                font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                font-size: 0.8rem;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 0.12em;
+                color: var(--muted);
+                margin: 0 0 1rem;
+            }
+            hr {
+                border: 0;
+                border-top: 1px solid var(--rule);
+                margin: 2.25rem 0;
+            }
+            .platforms {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+                font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                font-size: 0.95rem;
+            }
+            .platforms li {
+                margin: 0.4rem 0;
+                display: flex;
+                gap: 0.75rem;
+            }
+            .platforms li .key {
+                color: var(--muted);
+                flex: 0 0 7rem;
+            }
+            .source {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+                font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+                font-size: 0.95rem;
+            }
+            .source li {
+                margin: 0.4rem 0;
+                display: flex;
+                gap: 0.75rem;
+            }
+            .source li .key {
+                color: var(--muted);
+                flex: 0 0 7rem;
+            }
+            a {
+                color: inherit;
+                text-decoration: underline;
+                text-underline-offset: 3px;
+            }
+            a:hover {
+                color: var(--muted);
+            }
+            footer {
+                margin-top: 2.5rem;
+                font-size: 0.85rem;
+                color: var(--muted);
+                font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>beam</h1>
+            <p class="tagline">Share without the cloud.</p>
+
+            <p class="creed">
+                <span class="muted">No accounts.</span>
+                <span class="muted">No servers.</span>
+                <span class="strong">Just devices, end-to-end.</span>
+            </p>
+
+            <hr />
+
+            <h2>Get Beam</h2>
+            <ul class="platforms">
+                <li>
+                    <span class="key">iOS</span>
+                    <a href="https://github.com/atman-project/beam-ios"
+                        >beam-ios</a
+                    >
+                </li>
+                <li>
+                    <span class="key">Android</span>
+                    <a href="https://github.com/atman-project/beam-android"
+                        >beam-android</a
+                    >
+                </li>
+                <li>
+                    <span class="key">macOS</span>
+                    <a
+                        href="https://github.com/atman-project/beam/releases"
+                        >releases</a
+                    >
+                </li>
+                <li>
+                    <span class="key">Windows</span>
+                    <a
+                        href="https://github.com/atman-project/beam/releases"
+                        >releases</a
+                    >
+                </li>
+                <li>
+                    <span class="key">Linux</span>
+                    <a
+                        href="https://github.com/atman-project/beam/releases"
+                        >releases</a
+                    >
+                </li>
+            </ul>
+
+            <hr />
+
+            <h2>Source</h2>
+            <ul class="source">
+                <li>
+                    <span class="key">beam</span>
+                    <a href="https://github.com/atman-project/beam"
+                        >desktop + Android (Tauri)</a
+                    >
+                </li>
+                <li>
+                    <span class="key">beam-ios</span>
+                    <a href="https://github.com/atman-project/beam-ios"
+                        >native Swift app</a
+                    >
+                </li>
+                <li>
+                    <span class="key">beam-android</span>
+                    <a href="https://github.com/atman-project/beam-android"
+                        >native Android app</a
+                    >
+                </li>
+            </ul>
+
+            <hr />
+
+            <p class="creed">
+                <span class="muted">Built on</span>
+                <a href="/">atman</a> —
+                <span class="muted"
+                    >a universal peer-to-peer sync engine.</span
+                >
+            </p>
+        </main>
+    </body>
+</html>
