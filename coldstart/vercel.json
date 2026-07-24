@@ -1,9 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "coldstart.atman.sh" }],
-      "destination": "/coldstart/:path*"
-    }
-  ]
-}

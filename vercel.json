@@ -1,0 +1,14 @@
+{
+  "routes": [
+    {
+      "has": [{ "type": "host", "value": "coldstart.atman.sh" }],
+      "src": "^/$",
+      "dest": "/coldstart/index.html"
+    },
+    {
+      "has": [{ "type": "host", "value": "coldstart.atman.sh" }],
+      "src": "^/(.+)$",
+      "dest": "/coldstart/$1"
+    }
+  ]
+}
