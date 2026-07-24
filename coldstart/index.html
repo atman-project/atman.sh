@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cold Start — No stress</title>
+<style>
+  :root{
+    --bg:#f4f2ec;--panel:#fffdf9;--panel-2:#faf8f2;--ink:#26251f;--ink-soft:#5c594f;
+    --muted:#98948a;--line:#e7e3d8;--line-2:#efece2;--accent:#2f8a72;--accent-soft:#e4f1eb;
+    --amber:#a9772b;--amber-soft:#f6ecd8;--coral:#c05f4f;--coral-soft:#f8e7e2;
+    --shadow:0 1px 2px rgba(40,36,25,.04), 0 8px 24px rgba(40,36,25,.06);
+    --shadow-lift:0 2px 6px rgba(40,36,25,.06), 0 18px 44px rgba(40,36,25,.10);--radius:18px;
+  }
+  html[data-theme="dark"]{
+    --bg:#17181a;--panel:#1f2124;--panel-2:#25272b;--ink:#ecebe6;--ink-soft:#b7b5ad;
+    --muted:#7c7a72;--line:#2e3135;--line-2:#292c30;--accent:#5cc0a2;--accent-soft:#1c2f2a;
+    --amber:#d6a44e;--amber-soft:#2e2717;--coral:#e08677;--coral-soft:#301f1c;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    --shadow-lift:0 2px 8px rgba(0,0,0,.4), 0 22px 50px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",system-ui,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased;
+    letter-spacing:-0.01em;padding-bottom:80px;transition:background .3s ease,color .3s ease;
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:0 20px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;max-width:720px;margin:0 auto;padding:22px 20px 8px}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:680;font-size:16px;letter-spacing:-0.02em}
+  .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+  .brand .brand-sub{font-size:14px;font-weight:650;color:var(--accent);border-left:1px solid var(--line);padding-left:9px;margin-left:3px;letter-spacing:-0.01em}
+  .topbar-right{display:flex;align-items:center;gap:12px}
+  .langsel{position:relative;display:inline-flex;align-items:center}
+  .langsel select{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--ink-soft);font-family:inherit;font-size:12px;font-weight:600;padding:6px 20px 6px 24px;border-radius:9px;cursor:pointer;transition:.15s;letter-spacing:-.01em}
+  .langsel select:hover{background:var(--panel-2)}
+  .langsel::before{content:"🌐";position:absolute;left:7px;font-size:11px;pointer-events:none}
+  .langsel::after{content:"⌄";position:absolute;right:7px;top:4px;color:var(--muted);pointer-events:none;font-size:12px}
+  .sync{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+  .sync .pulse{width:7px;height:7px;border-radius:50%;background:var(--accent);position:relative}
+  .sync .pulse::after{content:"";position:absolute;inset:-4px;border-radius:50%;background:var(--accent);opacity:.25;animation:ping 2.4s ease-out infinite}
+  @keyframes ping{0%{transform:scale(.6);opacity:.4}80%,100%{transform:scale(2.2);opacity:0}}
+  .demo-pill{font-size:10.5px;font-weight:700;letter-spacing:.03em;color:var(--muted);background:var(--panel-2);border:1px solid var(--line);padding:4px 9px;border-radius:20px;white-space:nowrap}
+  @media(max-width:560px){.demo-pill{display:none}}
+  .theme-btn{border:1px solid var(--line);background:var(--panel);color:var(--ink-soft);width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:15px;display:grid;place-items:center;transition:.2s}
+  .theme-btn:hover{background:var(--panel-2)}
+  .hero{padding:26px 0 6px}
+  .hero h1{font-size:27px;font-weight:680;letter-spacing:-0.03em;line-height:1.25}
+  .hero p{margin-top:8px;color:var(--ink-soft);font-size:15.5px;max-width:560px}
+  .hero .accent{color:var(--accent);font-weight:650}
+  .ledger{margin-top:20px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow)}
+  .ledger-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:14px}
+  .ledger-head b{font-weight:720}
+  .ledger-head .lh-main{font-size:15px}
+  .ledger-note{font-size:12px;color:var(--muted)}
+  .tiers{display:flex;gap:10px}
+  .tier{flex:1;display:flex;flex-direction:column;gap:1px;padding:11px 13px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line-2);cursor:pointer;text-decoration:none;color:inherit;transition:.18s}
+  .tier:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+  .tier .tdot{width:8px;height:8px;border-radius:50%;margin-bottom:5px}
+  .tier .tn{font-size:22px;font-weight:720;letter-spacing:-.03em;line-height:1.1}
+  .tier .tl{font-size:12px;color:var(--muted)}
+  .t-now .tdot{background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+  .t-now .tn{color:var(--accent)}
+  .t-fyi .tdot{background:var(--amber)}
+  .t-low .tdot{background:var(--muted)}
+  .seclabel{display:flex;align-items:center;gap:9px;margin:34px 4px 14px;font-size:13px;font-weight:600;color:var(--ink-soft)}
+  .seclabel .count{background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:12px;padding:1px 8px;border-radius:20px}
+  .seclabel .rule{flex:1;height:1px;background:var(--line-2)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:18px;overflow:hidden;transition:box-shadow .25s ease, transform .25s ease, opacity .3s ease}
+  .card:hover{box-shadow:var(--shadow-lift)}
+  .card.done{opacity:.45;transform:scale(.99)}
+  .card-head{display:flex;align-items:flex-start;gap:13px;padding:18px 20px 4px}
+  .avatar{width:38px;height:38px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;font-size:16px;font-weight:700;color:#fff;background:linear-gradient(135deg,#7b6ef0,#5b4fd0)}
+  .meta{flex:1;min-width:0}
+  .meta .who{font-weight:640;font-size:14.5px}
+  .meta .where{font-size:12.5px;color:var(--muted);margin-top:3px;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+  .chip-src{display:inline-flex;align-items:center;gap:4px;background:var(--panel-2);border:1px solid var(--line-2);padding:1px 7px;border-radius:6px;font-size:11.5px;color:var(--ink-soft)}
+  .tag-hard{background:var(--coral-soft);color:var(--coral);font-size:11.5px;font-weight:650;padding:3px 9px;border-radius:20px;white-space:nowrap}
+  .q{margin:8px 20px 0;padding:13px 15px;background:var(--panel-2);border-left:3px solid var(--line);border-radius:0 10px 10px 0;font-size:14.5px;color:var(--ink);cursor:pointer}
+  .q:hover{border-left-color:var(--accent)}
+  .ex-bar{display:flex;align-items:center;gap:8px;margin-top:10px}
+  .ex-tag{font-size:11px;color:var(--muted)}
+  .ex-toggle{border:none;background:transparent;color:var(--accent);font-family:inherit;font-size:11px;font-weight:650;cursor:pointer;padding:2px 7px;border-radius:6px;transition:.15s}
+  .ex-toggle:hover{background:var(--accent-soft)}
+  .sendbar{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line-2);background:var(--amber-soft)}
+  .send-tag{font-size:11.5px;color:var(--amber);font-weight:600}
+  .send-toggle{border:1px solid var(--amber);background:transparent;color:var(--amber);font-family:inherit;font-size:11px;font-weight:650;cursor:pointer;padding:3px 10px;border-radius:7px;transition:.15s;margin-left:auto;white-space:nowrap}
+  .send-toggle:hover{background:var(--panel)}
+  .block{padding:0 20px}
+  .blabel{font-size:11.5px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin:18px 0 8px;display:flex;align-items:center;gap:7px}
+  .context{font-size:14px;color:var(--ink-soft)}
+  .context li{list-style:none;padding:5px 0 5px 20px;position:relative}
+  .context li::before{content:"";position:absolute;left:4px;top:12px;width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.5}
+  .sources{display:flex;flex-wrap:wrap;gap:8px}
+  .schip{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:10px;font-size:13px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink)}
+  .schip .st{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:5px;letter-spacing:.02em}
+  .st.stable{background:var(--accent-soft);color:var(--accent)}
+  .st.draft{background:var(--line-2);color:var(--muted)}
+  .st.review{background:var(--amber-soft);color:var(--amber)}
+  .schip.warn{border-color:var(--amber);background:var(--amber-soft)}
+  .schip .code{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:12px;color:var(--ink-soft)}
+  .schip.file .ico{opacity:.6}
+  .gap{margin-top:4px;border:1px solid var(--coral);border-radius:12px;overflow:hidden;background:var(--coral-soft)}
+  .gap-head{padding:10px 14px;font-size:13px;font-weight:650;color:var(--coral);display:flex;align-items:center;gap:8px}
+  .gap-body{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+  .gap-cell{background:var(--panel);padding:11px 14px}
+  .gap-cell .lab{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:5px}
+  .gap-cell .val{font-size:13.5px}
+  .gap-cell .val .mono{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--panel-2);padding:1px 5px;border-radius:4px}
+  .gap-cell.spec .lab{color:var(--accent)}
+  .gap-cell.impl .lab{color:var(--coral)}
+  .draft{margin-top:4px;border:1px solid var(--line);border-radius:12px;background:var(--panel-2)}
+  .draft-top{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line-2)}
+  .draft-top .l{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);font-weight:600}
+  .voice{font-size:11px;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:20px;font-weight:650}
+  .voice.voice-send{color:var(--amber);background:var(--amber-soft)}
+  .draft-body{padding:13px 15px;font-size:14px;color:var(--ink);line-height:1.62}
+  .draft-body .cite{color:var(--accent);font-size:10.5px;font-weight:700;vertical-align:super;background:var(--accent-soft);padding:0 4px;border-radius:4px;margin:0 1px;cursor:help}
+  .draft-body p{margin-bottom:9px}
+  .draft-body p:last-child{margin-bottom:0}
+  .draft-body[contenteditable="true"]{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
+  .refine{display:none;border-top:1px solid var(--line-2);padding:12px 14px;background:var(--panel)}
+  .refine.show{display:block}
+  .refine .rlab{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.03em;margin-bottom:9px;display:flex;align-items:center;gap:6px}
+  .refine-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .rchip{font-size:12px;color:var(--ink-soft);background:var(--panel-2);border:1px solid var(--line);border-radius:20px;padding:4px 11px;cursor:pointer;transition:.15s}
+  .rchip:hover{border-color:var(--accent);color:var(--accent)}
+  .refine-input{display:flex;gap:8px}
+  .refine-input input{flex:1;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:13px;font-family:inherit;background:var(--panel-2);color:var(--ink)}
+  .refine-input input:focus{outline:none;border-color:var(--accent)}
+  .refine-input button{border:none;background:var(--accent);color:#fff;border-radius:9px;padding:0 15px;font-weight:640;font-size:12.5px;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .edit-hint{font-size:11.5px;color:var(--muted);margin-top:10px;display:flex;align-items:flex-start;gap:6px;line-height:1.5}
+  .flag{display:flex;align-items:flex-start;gap:8px;margin-top:12px;padding:9px 13px;background:var(--amber-soft);border-radius:10px;font-size:12.5px;color:var(--amber)}
+  .flag .ico{margin-top:1px}
+  .actions{display:flex;align-items:center;gap:9px;padding:16px 20px 18px;flex-wrap:wrap}
+  .btn{border:none;border-radius:10px;padding:10px 16px;font-size:13.5px;font-weight:640;cursor:pointer;font-family:inherit;transition:.18s;display:inline-flex;align-items:center;gap:7px;letter-spacing:-0.01em}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{filter:brightness(1.06);transform:translateY(-1px)}
+  .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line)}
+  .btn-ghost:hover{background:var(--panel-2)}
+  .btn-plain{background:transparent;color:var(--muted);padding:10px 8px}
+  .btn-plain:hover{color:var(--ink-soft)}
+  .actions .spacer{flex:1}
+  .conf{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .conf .bar{width:46px;height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+  .conf .bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+  .quiet{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+  .qrow{display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line-2);font-size:13.5px}
+  .qrow:last-child{border-bottom:none}
+  .qrow.link{cursor:pointer;transition:background .15s}
+  .qrow.link:hover{background:var(--panel-2)}
+  .qrow .qi{width:26px;height:26px;border-radius:8px;background:var(--panel-2);display:grid;place-items:center;font-size:13px;flex-shrink:0}
+  .qrow .qt{flex:1;color:var(--ink-soft)}
+  .qrow .qt b{color:var(--ink);font-weight:620}
+  .opensrc{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--muted);text-decoration:none;border:1px solid var(--line);padding:2px 8px;border-radius:6px;transition:.15s;white-space:nowrap;background:var(--panel)}
+  .opensrc:hover{color:var(--accent);border-color:var(--accent)}
+  .ignored{margin-top:12px}
+  .ig-toggle{width:100%;text-align:left;background:transparent;border:1px dashed var(--line);border-radius:12px;padding:12px 16px;cursor:pointer;font-family:inherit;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:9px;transition:.2s}
+  .ig-toggle:hover{border-color:var(--muted);color:var(--ink-soft)}
+  .ig-toggle .chev{transition:transform .25s;margin-left:auto}
+  .ig-toggle.open .chev{transform:rotate(180deg)}
+  .ig-list{max-height:0;overflow:hidden;transition:max-height .3s ease}
+  .ig-list.open{max-height:460px}
+  .ig-inner{padding:6px 4px 0}
+  .igrow{display:flex;gap:11px;padding:10px 14px;font-size:13px;align-items:baseline}
+  .igrow.link{cursor:pointer;border-radius:8px;transition:background .15s}
+  .igrow.link:hover{background:var(--panel-2)}
+  .igrow .igt{flex:1;color:var(--ink-soft)}
+  .igrow .igw{font-size:11.5px;color:var(--coral);background:var(--coral-soft);padding:2px 8px;border-radius:6px;white-space:nowrap}
+  .foot{text-align:center;color:var(--muted);font-size:12.5px;margin-top:40px;line-height:1.7}
+  .foot .lock{color:var(--accent)}
+  @media(max-width:560px){.gap-body{grid-template-columns:1fr}.hero h1{font-size:23px}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="dot"></span>Cold&nbsp;Start<span class="brand-sub">No stress</span></div>
+  <div class="topbar-right">
+    <span class="demo-pill" data-i18n="demo">인터랙티브 데모 · 예시 데이터</span>
+    <div class="langsel">
+      <select id="langSel" onchange="setLang(this.value)" aria-label="Language">
+        <option value="ko">한국어</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+    <div class="sync"><span class="pulse"></span><span data-i18n="sync">온디바이스 · 방금 동기화됨</span></div>
+    <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">☾</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="hero">
+    <h1 data-i18n="hero.h1">좋은 아침이에요, Youngjoon.</h1>
+    <p data-i18n="hero.p">밤새 <span class="accent">GitHub · Discord · Notion · 메일</span>에 쌓인 걸 전부 읽고, 중요도순으로 정리했어요. 스레드도, 관련 스펙도, Rust 코드도 다 봤고요. 지금 당장 당신 손이 필요한 건 <span class="accent">2개</span>예요.</p>
+    <div class="ledger">
+      <div class="ledger-head">
+        <span class="lh-main" data-i18n="ledger.main">알림 <b>47개</b>, 전부 여기 있어요</span>
+        <span class="ledger-note" data-i18n="ledger.note">숨기거나 대신 처리한 것 없음 · 아무 항목이나 눌러 원본으로 이동</span>
+      </div>
+      <div class="tiers">
+        <a class="tier t-now" href="#" onclick="return false"><span class="tdot"></span><span class="tn">2</span><span class="tl" data-i18n="tier.now">답변 필요</span></a>
+        <a class="tier t-fyi" href="#" onclick="return false"><span class="tdot"></span><span class="tn">3</span><span class="tl" data-i18n="tier.fyi">알아만 둬</span></a>
+        <a class="tier t-low" href="#" onclick="return false"><span class="tdot"></span><span class="tn">42</span><span class="tl" data-i18n="tier.low">낮은 우선순위</span></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="seclabel"><span data-i18n="sec.reply">답변이 필요해요</span><span class="count">2</span><span class="rule"></span></div>
+
+  <!-- CARD 1 -->
+  <div class="card" id="card1">
+    <div class="card-head">
+      <div class="avatar">jp</div>
+      <div class="meta">
+        <div class="who" data-i18n="c1.who">jphil <span style="color:var(--muted);font-weight:400">· 커뮤니티 기여자</span></div>
+        <div class="where">
+          <span class="chip-src">💬 Discord</span><span class="chip-src">#drift-dev</span>
+          <span data-i18n="c1.time">· 스레드 34개 메시지 · 새벽 3:12</span>
+          <a class="opensrc" href="#" onclick="return false" data-i18n="orig.thread">↗ 원본 스레드</a>
+        </div>
+      </div>
+      <span class="tag-hard" data-i18n="tag.hard">깊은 조사 필요</span>
+    </div>
+
+    <div class="q excerpt" data-key="c1.q" data-orig="ko" data-mode="translated">
+      <div class="ex-text">"relay로 보낸 메시지가 가끔 피어 한쪽에만 도착하고 반대편엔 안 와요. 재전송이 스펙대로면 이럴 리가 없는데, 버그인가요 스펙 문제인가요?"</div>
+      <div class="ex-bar"><span class="ex-tag"></span><button class="ex-toggle" onclick="toggleOrig(this)"></button></div>
+    </div>
+
+    <div class="block">
+      <div class="blabel" data-i18n="lab.context">🧵 여기까지의 맥락 <span style="color:var(--muted);font-weight:400;letter-spacing:0">— 스레드 34개를 3줄로</span></div>
+      <ul class="context" data-i18n="c1.context">
+        <li>3명이 각자 다른 네트워크에서 같은 증상을 재현함. 공통점은 피어 수가 8 이하일 때만 발생.</li>
+        <li>지난주 비슷한 리포트가 있었고 당신이 "mesh degree 문제로 보인다"고 답한 적 있음 (기억 은행).</li>
+        <li>질문자는 이미 로그를 첨부했고, 재전송이 3회가 아니라 더 일찍 끊기는 정황을 봄.</li>
+      </ul>
+
+      <div class="blabel" data-i18n="lab.touch">🔗 이 질문이 닿는 곳</div>
+      <div class="sources" data-i18n="c1.sources">
+        <span class="schip"><span class="st stable">STABLE</span> 11/DRIFT-RELAY</span>
+        <span class="schip warn"><span class="st review">IN REVIEW</span> PR&nbsp;#218 <span style="color:var(--amber);font-size:11px">재전송 로직 수정 중 ⚠</span></span>
+        <span class="schip file"><span class="ico">📄</span><span class="code">relay/src/protocol.rs</span></span>
+        <span class="schip file"><span class="ico">📄</span><span class="code">relay/src/mesh.rs:88</span></span>
+      </div>
+
+      <div class="blabel" data-i18n="lab.cause">🎯 원인 후보 <span style="color:var(--muted);font-weight:400;letter-spacing:0">— 스펙과 구현의 틈</span></div>
+      <div class="gap">
+        <div class="gap-head" data-i18n="c1.gaphead">⚠ 의도된 동작과 실제 구현이 어긋나 있어요</div>
+        <div class="gap-body">
+          <div class="gap-cell spec">
+            <div class="lab" data-i18n="c1.speclab">📘 스펙 (11/DRIFT-RELAY §4.2)</div>
+            <div class="val" data-i18n="c1.specval">재전송은 피어 수와 무관하게 <span class="mono">D=6</span> 메시 유지, 최소 <span class="mono">D_low=4</span> 보장</div>
+          </div>
+          <div class="gap-cell impl">
+            <div class="lab" data-i18n="c1.impllab">🦀 구현 (mesh.rs:88)</div>
+            <div class="val" data-i18n="c1.implval"><span class="mono">D_low</span> 미달 시 재그래프트가 <span class="mono">peers &lt; 8</span> 조건에서 스킵됨 — PR&nbsp;#218이 바로 이걸 고치는 중</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="blabel" data-i18n="lab.draft">✍️ 답변 초안</div>
+      <div class="draft">
+        <div class="draft-top">
+          <div class="l" data-i18n="c1.reply">📤 #drift-dev 에 답장</div>
+          <span class="voice" id="voice1">당신 말투로 작성됨</span>
+        </div>
+        <div id="draft1-sendbar" class="sendbar" style="display:none"><span class="send-tag"></span><button class="send-toggle" onclick="toggleSend('draft1')"></button></div>
+        <div class="draft-body" id="draft1" data-key="c1.draft" data-send="ko" data-mode="display">
+          <p>버그가 맞고, 스펙 문제는 아니에요. 스펙(11/DRIFT-RELAY §4.2<span class="cite" title="11/DRIFT-RELAY, Stable">1</span>)은 피어 수와 상관없이 메시 degree를 유지하도록 돼 있는데, 지금 구현(<code>mesh.rs:88</code><span class="cite" title="relay/src/mesh.rs line 88">2</span>)이 피어가 8개 미만일 때 재그래프트를 건너뛰고 있어서, 소규모 네트워크에서 한쪽 메시가 degree 미달로 남고 전파가 비대칭이 됩니다.</p>
+          <p>마침 이걸 고치는 PR #218<span class="cite" title="PR #218 — in review">3</span>이 리뷰 중이에요. 병합되면 해결될 이슈라, 재현 로그만 그 PR에 붙여주시면 검증에 큰 도움이 됩니다. 급하면 <code>D_low</code>를 임시로 낮추는 워크어라운드가 있는데 프로덕션엔 권하진 않아요.</p>
+        </div>
+        <div class="refine" id="refine1">
+          <div class="rlab" data-i18n="refine.lab">✏️ 직접 고치거나 · AI에게 시키거나</div>
+          <div class="refine-chips">
+            <span class="rchip" onclick="aiFlash(this)" data-i18n="chip.concise">더 간결하게</span>
+            <span class="rchip" onclick="aiFlash(this)" data-i18n="chip.soft">톤 부드럽게</span>
+            <span class="rchip" onclick="aiFlash(this)" data-i18n="chip.evi">근거 더 자세히</span>
+            <span class="rchip" onclick="aiFlash(this)" data-i18n="chip.trans">영어로</span>
+          </div>
+          <div class="refine-input">
+            <input data-ph="ph.refine1" placeholder="AI에게 어떻게 다듬을지 말하기…  예) 워크어라운드는 빼줘">
+            <button onclick="aiFlash(this)" data-i18n="btn.airefine">AI로 다듬기</button>
+          </div>
+          <div class="edit-hint" data-i18n="hint.edit1">💡 위 초안을 직접 클릭해서 문장을 고쳐도 되고, AI에게 시켜도 돼요 — AI는 이미 이 대화·스펙·코드 맥락을 다 갖고 있어요.</div>
+        </div>
+      </div>
+
+      <div class="flag"><span class="ico">⚠</span><span data-i18n="c1.flag">관련 스펙이 <b>리뷰 중(PR #218)</b>이라, "이게 최종 동작"이라고 단정하진 않았어요. 보내기 전에 PR 상태만 한번 봐주세요.</span></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="approve('card1')" data-i18n="btn.approve">승인하고 보내기</button>
+      <button class="btn btn-ghost" onclick="refine('draft1','refine1')" data-i18n="btn.refine">다듬기</button>
+      <button class="btn btn-plain" data-i18n="btn.later">나중에</button>
+      <div class="spacer"></div>
+      <div class="conf"><span data-i18n="conf.label">확신도</span> <div class="bar"><i style="width:82%"></i></div> <span data-i18n="conf.high">높음</span></div>
+    </div>
+  </div>
+
+  <!-- CARD 2 -->
+  <div class="card" id="card2">
+    <div class="card-head">
+      <div class="avatar" style="background:linear-gradient(135deg,#3aa6b9,#2b7f96)">mk</div>
+      <div class="meta">
+        <div class="who" data-i18n="c2.who">mk.eth <span style="color:var(--muted);font-weight:400">· 외부 리서처</span></div>
+        <div class="where">
+          <span class="chip-src">💬 Discord</span><span class="chip-src">#consensus</span>
+          <span data-i18n="c2.time">· 스레드 11개 메시지 · 새벽 5:40</span>
+          <a class="opensrc" href="#" onclick="return false" data-i18n="orig.thread">↗ 원본 스레드</a>
+        </div>
+      </div>
+      <span class="tag-hard" data-i18n="tag.hard">깊은 조사 필요</span>
+    </div>
+
+    <div class="q excerpt" data-key="c2.q" data-orig="en" data-mode="translated">
+      <div class="ex-text">"Helix에서 leader election 확률이 스테이크에 완전히 비례하나요? 문서랑 최근 논의가 좀 달라 보여서요."</div>
+      <div class="ex-bar"><span class="ex-tag"></span><button class="ex-toggle" onclick="toggleOrig(this)"></button></div>
+    </div>
+
+    <div class="block">
+      <div class="blabel" data-i18n="lab.context2">🧵 여기까지의 맥락</div>
+      <ul class="context" data-i18n="c2.context">
+        <li>질문자는 spec.drift.dev의 Helix 문서(Raw)를 읽고 왔는데, 그 문서는 2주 전 Notion 논의 이후로 업데이트가 안 된 상태.</li>
+        <li>Notion 설계 노트에서 active slot coefficient 관련 조정이 논의됐고, 아직 스펙에 반영 전.</li>
+      </ul>
+
+      <div class="blabel" data-i18n="lab.touch">🔗 이 질문이 닿는 곳</div>
+      <div class="sources" data-i18n="c2.sources">
+        <span class="schip"><span class="st draft">RAW</span> Helix Protocol</span>
+        <span class="schip warn"><span class="st review">NOTION</span> 설계 노트 · 미반영 ⚠</span>
+        <span class="schip file"><span class="ico">📄</span><span class="code">consensus/src/leader.rs</span></span>
+      </div>
+
+      <div class="blabel" data-i18n="lab.draft">✍️ 답변 초안</div>
+      <div class="draft">
+        <div class="draft-top">
+          <div class="l" data-i18n="c2.reply">📤 #consensus 에 답장</div>
+          <span class="voice" id="voice2">당신 말투로 작성됨</span>
+        </div>
+        <div id="draft2-sendbar" class="sendbar" style="display:none"><span class="send-tag"></span><button class="send-toggle" onclick="toggleSend('draft2')"></button></div>
+        <div class="draft-body" id="draft2" data-key="c2.draft" data-send="en" data-mode="display">
+          <p>네, 기본적으로 스테이크에 비례해요 — <code>leader.rs</code>의 lottery는 stake-proportional threshold를 씁니다<span class="cite" title="consensus/src/leader.rs">1</span>. 다만 문서(Helix, Raw<span class="cite" title="spec.drift.dev — Helix, Raw">2</span>)가 최근 논의를 아직 안 담고 있어요. active slot coefficient 조정 얘기가 Notion에서 오갔는데 스펙 반영 전이라, 문서만 보면 살짝 어긋나 보이는 게 맞습니다.</p>
+        </div>
+        <div class="refine" id="refine2">
+          <div class="rlab" data-i18n="refine.lab">✏️ 직접 고치거나 · AI에게 시키거나</div>
+          <div class="refine-chips">
+            <span class="rchip" onclick="aiFlash(this)" data-i18n="chip.concise">더 간결하게</span>
+            <span class="rchip" onclick="aiFlash(this)" data-i18n="chip.soft">톤 부드럽게</span>
+            <span class="rchip" onclick="aiFlash(this)" data-i18n="chip.nonotion">Notion 내용은 빼기</span>
+          </div>
+          <div class="refine-input">
+            <input data-ph="ph.refine2" placeholder="AI에게 어떻게 다듬을지 말하기…">
+            <button onclick="aiFlash(this)" data-i18n="btn.airefine">AI로 다듬기</button>
+          </div>
+          <div class="edit-hint" data-i18n="hint.edit2">💡 직접 클릭해서 고치거나 AI에게 시키거나 — 맥락은 이미 AI가 갖고 있어요.</div>
+        </div>
+      </div>
+
+      <div class="flag"><span class="ico">✋</span><span data-i18n="c2.flag">이건 <b>당신의 판단이 필요한 부분</b>이 있어요 — Notion 논의를 커뮤니티에 공개해도 되는지 제가 확신할 수 없어서, 초안엔 결론만 담고 세부는 뺐어요.</span></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="approve('card2')" data-i18n="btn.approve">승인하고 보내기</button>
+      <button class="btn btn-ghost" onclick="refine('draft2','refine2')" data-i18n="btn.refine">다듬기</button>
+      <button class="btn btn-plain" data-i18n="btn.later">나중에</button>
+      <div class="spacer"></div>
+      <div class="conf"><span data-i18n="conf.label">확신도</span> <div class="bar"><i style="width:58%"></i></div> <span data-i18n="conf.med">보통</span></div>
+    </div>
+  </div>
+
+  <div class="seclabel"><span data-i18n="sec.fyi">알아만 두세요</span><span class="rule"></span></div>
+  <div class="quiet">
+    <div class="qrow link" onclick="return false">
+      <div class="qi">🔀</div>
+      <div class="qt" data-i18n="fyi1"><b>PR #218</b> (relay 재전송 수정) 에 리뷰어가 코멘트 2개를 남겼어요 — 당신 승인 대기 중은 아님.</div>
+      <a class="opensrc" href="#" onclick="return false">GitHub ↗</a>
+    </div>
+    <div class="qrow link" onclick="return false">
+      <div class="qi">📝</div>
+      <div class="qt" data-i18n="fyi2"><b>14/DRIFT-MESSAGE</b> 문서에 오타 수정 PR이 올라옴. 사소해서 자동 분류만 해뒀어요.</div>
+      <a class="opensrc" href="#" onclick="return false">GitHub ↗</a>
+    </div>
+    <div class="qrow link" onclick="return false">
+      <div class="qi">📅</div>
+      <div class="qt" data-i18n="fyi3">내일 <b>consensus sync</b> 미팅. 위 #2 질문이 안건이랑 겹쳐서 묶어뒀어요.</div>
+      <a class="opensrc" href="#" onclick="return false">Notion ↗</a>
+    </div>
+  </div>
+
+  <div class="ignored">
+    <button class="ig-toggle" id="igToggle" onclick="toggleIgnored()">
+      <span>🤫</span><span data-i18n="ig.summary">나머지 <b>42개</b>는 지금 당신을 급히 기다리진 않는다고 판단해서 걸렀어요</span>
+      <span style="color:var(--accent);font-weight:600" data-i18n="ig.why">왜?</span>
+      <span class="chev">⌄</span>
+    </button>
+    <div class="ig-list" id="igList">
+      <div class="ig-inner">
+        <div class="igrow link" onclick="return false"><div class="igt" data-i18n="ig1">Discord <b>#general</b> 잡담 28건</div><div class="igw" data-i18n="ig1w">당신 관련 없음</div><a class="opensrc" href="#" onclick="return false" data-i18n="orig.short">↗ 원본</a></div>
+        <div class="igrow link" onclick="return false"><div class="igt" data-i18n="ig2">GitHub CI 성공 알림 8건</div><div class="igw" data-i18n="ig2w">액션 불필요</div><a class="opensrc" href="#" onclick="return false" data-i18n="orig.short">↗ 원본</a></div>
+        <div class="igrow link" onclick="return false"><div class="igt" data-i18n="ig3">이미 다른 코어팀원이 답한 질문 4건</div><div class="igw" data-i18n="ig3w">해결됨</div><a class="opensrc" href="#" onclick="return false" data-i18n="orig.short">↗ 원본</a></div>
+        <div class="igrow link" onclick="return false"><div class="igt" data-i18n="ig4">봇 / 뉴스레터 자동 발송 2건</div><div class="igw" data-i18n="ig4w">노이즈</div><a class="opensrc" href="#" onclick="return false" data-i18n="orig.short">↗ 원본</a></div>
+        <div class="igrow" style="border-top:1px solid var(--line-2);margin-top:4px;padding-top:12px"><div class="igt" style="color:var(--muted)" data-i18n="ig.note">항목을 누르면 원본으로 바로 갈 수 있어요. "이건 걸렀으면 안 됐는데" 싶으면 위로 올리세요 — 되살릴수록 저는 당신 기준을 더 잘 배워요.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><span class="lock">🔒</span> <span data-i18n="foot">이 모든 건 당신 기기 안에서만 처리됐어요. 프라이빗 레포도, 리뷰 중 스펙도, DM도 어떤 서버로도 나가지 않았어요.<br>No Stress · 당신의 Work Engine · Atman 위에서 동작</span></div>
+
+</div>
+
+<script>
+  const I18N = {
+    "demo":{ko:`인터랙티브 데모 · 예시 데이터`,en:`Interactive demo · sample data`},
+    "sync":{ko:`온디바이스 · 방금 동기화됨`,en:`On-device · Synced just now`},
+    "hero.h1":{ko:`좋은 아침이에요, Youngjoon.`,en:`Good morning, Youngjoon.`},
+    "hero.p":{ko:`밤새 <span class="accent">GitHub · Discord · Notion · 메일</span>에 쌓인 걸 전부 읽고, 중요도순으로 정리했어요. 스레드도, 관련 스펙도, Rust 코드도 다 봤고요. 지금 당장 당신 손이 필요한 건 <span class="accent">2개</span>예요.`,en:`Overnight I read everything that piled up across <span class="accent">GitHub · Discord · Notion · email</span> and sorted it by importance — threads, related specs, Rust code, all of it. <span class="accent">2 things</span> need you right now.`},
+    "ledger.main":{ko:`알림 <b>47개</b>, 전부 여기 있어요`,en:`All <b>47</b> notifications, right here`},
+    "ledger.note":{ko:`숨기거나 대신 처리한 것 없음 · 아무 항목이나 눌러 원본으로 이동`,en:`Nothing hidden or done for you · tap any item to open the source`},
+    "tier.now":{ko:`답변 필요`,en:`Needs a reply`},
+    "tier.fyi":{ko:`알아만 둬`,en:`Just so you know`},
+    "tier.low":{ko:`낮은 우선순위`,en:`Low priority`},
+    "sec.reply":{ko:`답변이 필요해요`,en:`Needs a reply`},
+    "sec.fyi":{ko:`알아만 두세요`,en:`Just so you know`},
+    "tag.hard":{ko:`깊은 조사 필요`,en:`Deep dig needed`},
+    "lab.context":{ko:`🧵 여기까지의 맥락 <span style="color:var(--muted);font-weight:400;letter-spacing:0">— 스레드 34개를 3줄로</span>`,en:`🧵 Context so far <span style="color:var(--muted);font-weight:400;letter-spacing:0">— 34 messages in 3 lines</span>`},
+    "lab.context2":{ko:`🧵 여기까지의 맥락`,en:`🧵 Context so far`},
+    "lab.touch":{ko:`🔗 이 질문이 닿는 곳`,en:`🔗 What this question touches`},
+    "lab.cause":{ko:`🎯 원인 후보 <span style="color:var(--muted);font-weight:400;letter-spacing:0">— 스펙과 구현의 틈</span>`,en:`🎯 Likely cause <span style="color:var(--muted);font-weight:400;letter-spacing:0">— the gap between spec and code</span>`},
+    "lab.draft":{ko:`✍️ 답변 초안`,en:`✍️ Draft reply`},
+    "voice":{ko:`당신 말투로 작성됨`,en:`Written in your voice`},
+    "refine.lab":{ko:`✏️ 직접 고치거나 · AI에게 시키거나`,en:`✏️ Edit it yourself · or ask AI`},
+    "chip.concise":{ko:`더 간결하게`,en:`More concise`},
+    "chip.soft":{ko:`톤 부드럽게`,en:`Softer tone`},
+    "chip.evi":{ko:`근거 더 자세히`,en:`More evidence`},
+    "chip.trans":{ko:`영어로`,en:`In Korean`},
+    "chip.nonotion":{ko:`Notion 내용은 빼기`,en:`Exclude the Notion bits`},
+    "btn.airefine":{ko:`AI로 다듬기`,en:`Refine with AI`},
+    "btn.approve":{ko:`승인하고 보내기`,en:`Approve & send`},
+    "btn.refine":{ko:`다듬기`,en:`Refine`},
+    "btn.later":{ko:`나중에`,en:`Later`},
+    "conf.label":{ko:`확신도`,en:`Confidence`},
+    "conf.high":{ko:`높음`,en:`High`},
+    "conf.med":{ko:`보통`,en:`Medium`},
+    "orig.thread":{ko:`↗ 원본 스레드`,en:`↗ original thread`},
+    "orig.short":{ko:`↗ 원본`,en:`↗ source`},
+    "ph.refine1":{ko:`AI에게 어떻게 다듬을지 말하기…  예) 워크어라운드는 빼줘`,en:`Tell AI how to refine…  e.g. drop the workaround`},
+    "ph.refine2":{ko:`AI에게 어떻게 다듬을지 말하기…`,en:`Tell AI how to refine…`},
+    "hint.edit1":{ko:`💡 위 초안을 직접 클릭해서 문장을 고쳐도 되고, AI에게 시켜도 돼요 — AI는 이미 이 대화·스펙·코드 맥락을 다 갖고 있어요.`,en:`💡 Click the draft above to edit it directly, or ask AI — it already has the full context of this thread, spec, and code.`},
+    "hint.edit2":{ko:`💡 직접 클릭해서 고치거나 AI에게 시키거나 — 맥락은 이미 AI가 갖고 있어요.`,en:`💡 Edit directly or ask AI — it already has the context.`},
+
+    "c1.who":{ko:`jphil <span style="color:var(--muted);font-weight:400">· 커뮤니티 기여자</span>`,en:`jphil <span style="color:var(--muted);font-weight:400">· community contributor</span>`},
+    "c1.time":{ko:`· 스레드 34개 메시지 · 새벽 3:12`,en:`· 34 messages in thread · 3:12 AM`},
+    "c1.q":{ko:`"relay로 보낸 메시지가 가끔 피어 한쪽에만 도착하고 반대편엔 안 와요. 재전송이 스펙대로면 이럴 리가 없는데, 버그인가요 스펙 문제인가요?"`,en:`"Messages I send via relay sometimes reach only one side of a peer, not the other. If retransmission follows the spec this shouldn't happen — is it a bug, or a spec issue?"`},
+    "c1.context":{ko:`<li>3명이 각자 다른 네트워크에서 같은 증상을 재현함. 공통점은 피어 수가 8 이하일 때만 발생.</li><li>지난주 비슷한 리포트가 있었고 당신이 "mesh degree 문제로 보인다"고 답한 적 있음 (기억 은행).</li><li>질문자는 이미 로그를 첨부했고, 재전송이 3회가 아니라 더 일찍 끊기는 정황을 봄.</li>`,en:`<li>Three people reproduced the same symptom on different networks. Common thread: it only happens when peer count is 8 or fewer.</li><li>There was a similar report last week, and you answered "looks like a mesh-degree problem" (from your memory bank).</li><li>The reporter already attached logs, showing retransmission cutting off earlier than the expected 3 attempts.</li>`},
+    "c1.sources":{ko:`<span class="schip"><span class="st stable">STABLE</span> 11/DRIFT-RELAY</span><span class="schip warn"><span class="st review">IN REVIEW</span> PR&nbsp;#218 <span style="color:var(--amber);font-size:11px">재전송 로직 수정 중 ⚠</span></span><span class="schip file"><span class="ico">📄</span><span class="code">relay/src/protocol.rs</span></span><span class="schip file"><span class="ico">📄</span><span class="code">relay/src/mesh.rs:88</span></span>`,en:`<span class="schip"><span class="st stable">STABLE</span> 11/DRIFT-RELAY</span><span class="schip warn"><span class="st review">IN REVIEW</span> PR&nbsp;#218 <span style="color:var(--amber);font-size:11px">fixing retransmit logic ⚠</span></span><span class="schip file"><span class="ico">📄</span><span class="code">relay/src/protocol.rs</span></span><span class="schip file"><span class="ico">📄</span><span class="code">relay/src/mesh.rs:88</span></span>`},
+    "c1.gaphead":{ko:`⚠ 의도된 동작과 실제 구현이 어긋나 있어요`,en:`⚠ Intended behavior and the actual code disagree`},
+    "c1.speclab":{ko:`📘 스펙 (11/DRIFT-RELAY §4.2)`,en:`📘 Spec (11/DRIFT-RELAY §4.2)`},
+    "c1.specval":{ko:`재전송은 피어 수와 무관하게 <span class="mono">D=6</span> 메시 유지, 최소 <span class="mono">D_low=4</span> 보장`,en:`Retransmit keeps mesh <span class="mono">D=6</span> regardless of peer count, guaranteeing at least <span class="mono">D_low=4</span>`},
+    "c1.impllab":{ko:`🦀 구현 (mesh.rs:88)`,en:`🦀 Code (mesh.rs:88)`},
+    "c1.implval":{ko:`<span class="mono">D_low</span> 미달 시 재그래프트가 <span class="mono">peers &lt; 8</span> 조건에서 스킵됨 — PR&nbsp;#218이 바로 이걸 고치는 중`,en:`Regraft on <span class="mono">D_low</span> shortfall is skipped when <span class="mono">peers &lt; 8</span> — PR&nbsp;#218 fixes exactly this`},
+    "c1.reply":{ko:`📤 #drift-dev 에 답장`,en:`📤 Reply to #drift-dev`},
+    "c1.draft":{ko:`<p>버그가 맞고, 스펙 문제는 아니에요. 스펙(11/DRIFT-RELAY §4.2<span class="cite" title="11/DRIFT-RELAY, Stable">1</span>)은 피어 수와 상관없이 메시 degree를 유지하도록 돼 있는데, 지금 구현(<code>mesh.rs:88</code><span class="cite" title="relay/src/mesh.rs line 88">2</span>)이 피어가 8개 미만일 때 재그래프트를 건너뛰고 있어서, 소규모 네트워크에서 한쪽 메시가 degree 미달로 남고 전파가 비대칭이 됩니다.</p><p>마침 이걸 고치는 PR #218<span class="cite" title="PR #218 — in review">3</span>이 리뷰 중이에요. 병합되면 해결될 이슈라, 재현 로그만 그 PR에 붙여주시면 검증에 큰 도움이 됩니다. 급하면 <code>D_low</code>를 임시로 낮추는 워크어라운드가 있는데 프로덕션엔 권하진 않아요.</p>`,en:`<p>It's a bug, not a spec issue. The spec (11/DRIFT-RELAY §4.2<span class="cite" title="11/DRIFT-RELAY, Stable">1</span>) keeps mesh degree regardless of peer count, but the current code (<code>mesh.rs:88</code><span class="cite" title="relay/src/mesh.rs line 88">2</span>) skips regraft when there are fewer than 8 peers — so on small networks one side's mesh stays under-degree and propagation becomes asymmetric.</p><p>PR #218<span class="cite" title="PR #218 — in review">3</span>, which fixes exactly this, is in review. It'll be resolved once merged, so attaching your repro logs to that PR would really help verification. There's a workaround — temporarily lowering <code>D_low</code> — but I wouldn't recommend it in production.</p>`},
+    "c1.flag":{ko:`관련 스펙이 <b>리뷰 중(PR #218)</b>이라, "이게 최종 동작"이라고 단정하진 않았어요. 보내기 전에 PR 상태만 한번 봐주세요.`,en:`The related spec is <b>in review (PR #218)</b>, so I didn't state this as final behavior. Give the PR status a glance before sending.`},
+
+    "c2.who":{ko:`mk.eth <span style="color:var(--muted);font-weight:400">· 외부 리서처</span>`,en:`mk.eth <span style="color:var(--muted);font-weight:400">· external researcher</span>`},
+    "c2.time":{ko:`· 스레드 11개 메시지 · 새벽 5:40`,en:`· 11 messages in thread · 5:40 AM`},
+    "c2.q":{ko:`"Helix에서 leader election 확률이 스테이크에 완전히 비례하나요? 문서랑 최근 논의가 좀 달라 보여서요."`,en:`"In Helix, is leader-election probability fully proportional to stake? The docs and recent discussion seem to differ."`},
+    "c2.context":{ko:`<li>질문자는 spec.drift.dev의 Helix 문서(Raw)를 읽고 왔는데, 그 문서는 2주 전 Notion 논의 이후로 업데이트가 안 된 상태.</li><li>Notion 설계 노트에서 active slot coefficient 관련 조정이 논의됐고, 아직 스펙에 반영 전.</li>`,en:`<li>The reporter read the Helix doc (Raw) on spec.drift.dev, but it hasn't been updated since the Notion discussion two weeks ago.</li><li>An active-slot-coefficient adjustment was discussed in the Notion design note, and isn't in the spec yet.</li>`},
+    "c2.sources":{ko:`<span class="schip"><span class="st draft">RAW</span> Helix Protocol</span><span class="schip warn"><span class="st review">NOTION</span> 설계 노트 · 미반영 ⚠</span><span class="schip file"><span class="ico">📄</span><span class="code">consensus/src/leader.rs</span></span>`,en:`<span class="schip"><span class="st draft">RAW</span> Helix Protocol</span><span class="schip warn"><span class="st review">NOTION</span> design note · not yet reflected ⚠</span><span class="schip file"><span class="ico">📄</span><span class="code">consensus/src/leader.rs</span></span>`},
+    "c2.reply":{ko:`📤 #consensus 에 답장`,en:`📤 Reply to #consensus`},
+    "c2.draft":{ko:`<p>네, 기본적으로 스테이크에 비례해요 — <code>leader.rs</code>의 lottery는 stake-proportional threshold를 씁니다<span class="cite" title="consensus/src/leader.rs">1</span>. 다만 문서(Helix, Raw<span class="cite" title="spec.drift.dev — Helix, Raw">2</span>)가 최근 논의를 아직 안 담고 있어요. active slot coefficient 조정 얘기가 Notion에서 오갔는데 스펙 반영 전이라, 문서만 보면 살짝 어긋나 보이는 게 맞습니다.</p>`,en:`<p>Yes, it's proportional to stake at its core — the lottery in <code>leader.rs</code> uses a stake-proportional threshold<span class="cite" title="consensus/src/leader.rs">1</span>. The doc (Helix, Raw<span class="cite" title="spec.drift.dev — Helix, Raw">2</span>) just hasn't caught up with the recent discussion. An active-slot-coefficient adjustment was discussed in Notion but isn't in the spec yet, so it's fair that the doc looks slightly off.</p>`},
+    "c2.flag":{ko:`이건 <b>당신의 판단이 필요한 부분</b>이 있어요 — Notion 논의를 커뮤니티에 공개해도 되는지 제가 확신할 수 없어서, 초안엔 결론만 담고 세부는 뺐어요.`,en:`This one <b>needs your judgment</b> — I can't be sure the Notion discussion is OK to share publicly, so the draft states only the conclusion and leaves out the details.`},
+
+    "fyi1":{ko:`<b>PR #218</b> (relay 재전송 수정) 에 리뷰어가 코멘트 2개를 남겼어요 — 당신 승인 대기 중은 아님.`,en:`<b>PR #218</b> (relay retransmit fix) got 2 reviewer comments — not waiting on your approval.`},
+    "fyi2":{ko:`<b>14/DRIFT-MESSAGE</b> 문서에 오타 수정 PR이 올라옴. 사소해서 자동 분류만 해뒀어요.`,en:`A typo-fix PR was opened on <b>14/DRIFT-MESSAGE</b>. Minor, so I just filed it.`},
+    "fyi3":{ko:`내일 <b>consensus sync</b> 미팅. 위 #2 질문이 안건이랑 겹쳐서 묶어뒀어요.`,en:`<b>consensus sync</b> meeting tomorrow. I grouped question #2 above with it since they overlap.`},
+
+    "ig.summary":{ko:`나머지 <b>42개</b>는 지금 당신을 급히 기다리진 않는다고 판단해서 걸렀어요`,en:`The other <b>42</b> I set aside — I judged they aren't urgently waiting on you`},
+    "ig.why":{ko:`왜?`,en:`Why?`},
+    "ig1":{ko:`Discord <b>#general</b> 잡담 28건`,en:`28 chit-chat messages in Discord <b>#general</b>`},
+    "ig1w":{ko:`당신 관련 없음`,en:`Not about you`},
+    "ig2":{ko:`GitHub CI 성공 알림 8건`,en:`8 GitHub CI success pings`},
+    "ig2w":{ko:`액션 불필요`,en:`No action`},
+    "ig3":{ko:`이미 다른 코어팀원이 답한 질문 4건`,en:`4 questions already answered by other core members`},
+    "ig3w":{ko:`해결됨`,en:`Resolved`},
+    "ig4":{ko:`봇 / 뉴스레터 자동 발송 2건`,en:`2 bot / newsletter auto-sends`},
+    "ig4w":{ko:`노이즈`,en:`Noise`},
+    "ig.note":{ko:`항목을 누르면 원본으로 바로 갈 수 있어요. "이건 걸렀으면 안 됐는데" 싶으면 위로 올리세요 — 되살릴수록 저는 당신 기준을 더 잘 배워요.`,en:`Tap an item to jump straight to its source. If something shouldn't have been set aside, promote it — the more you do, the better I learn your bar.`},
+    "foot":{ko:`이 모든 건 당신 기기 안에서만 처리됐어요. 프라이빗 레포도, 리뷰 중 스펙도, DM도 어떤 서버로도 나가지 않았어요.<br>Cold Start · No stress · Atman 위에서 동작`,en:`All of this ran entirely on your device. Private repos, in-review specs, DMs — none of it left for any server.<br>Cold Start · No stress · Running on Atman`},
+
+    "sent":{ko:`✓ 보냈어요 · 이 대화는 기억 은행에 반영됐어요`,en:`✓ Sent · this exchange was added to your memory bank`},
+    "refining":{ko:`다듬는 중…`,en:`refining…`},
+    "t.translated":{ko:`번역됨`,en:`Translated`},
+    "t.original":{ko:`원문`,en:`Original`},
+    "t.showOrig":{ko:`원문 보기`,en:`Show original`},
+    "t.translate":{ko:`번역하기`,en:`Translate`},
+    "t.sendLang":{ko:`전송 언어`,en:`Will send in`},
+    "t.sendsIn":{ko:`{L}로 전송`,en:`Sends in {L}`},
+    "t.inYourVoice":{ko:`당신의 {L} 말투`,en:`your {L} voice`},
+    "t.showSend":{ko:`실제 전송문 보기`,en:`Preview send language`},
+    "t.showMine":{ko:`내 언어로 보기`,en:`Back to my language`},
+    "voice.mine":{ko:`당신 말투로 작성됨`,en:`Written in your voice`},
+    "voice.inlang":{ko:`당신의 {L} 말투로 작성됨`,en:`In your {L} voice`}
+  };
+
+  const LNAME={ko:{ko:`한국어`,en:`Korean`},en:{ko:`영어`,en:`English`}};
+  function langName(code){return (LNAME[code]&&LNAME[code][LANG])||code;}
+  function tr(k){return (I18N[k]&&(I18N[k][LANG]!=null?I18N[k][LANG]:I18N[k]['en']))||'';}
+
+  function renderExcerpt(el){
+    const key=el.dataset.key, orig=el.dataset.orig;
+    const txt=el.querySelector('.ex-text'), bar=el.querySelector('.ex-bar');
+    const original=I18N[key][orig];
+    const translated=I18N[key][LANG]!=null?I18N[key][LANG]:I18N[key]['en'];
+    if(LANG===orig){txt.innerHTML=original;bar.style.display='none';return;}
+    bar.style.display='';
+    const tag=bar.querySelector('.ex-tag'), btn=bar.querySelector('.ex-toggle');
+    if((el.dataset.mode||'translated')==='translated'){
+      txt.innerHTML=translated;
+      tag.textContent='🌐 '+tr('t.translated')+' · '+langName(orig);
+      btn.textContent=tr('t.showOrig');
+    }else{
+      txt.innerHTML=original;
+      tag.textContent='🌐 '+tr('t.original')+' · '+langName(orig);
+      btn.textContent=tr('t.translate');
+    }
+  }
+  function toggleOrig(btn){
+    const el=btn.closest('.excerpt');
+    el.dataset.mode=(el.dataset.mode==='original')?'translated':'original';
+    renderExcerpt(el);
+  }
+  function renderDraft(el){
+    const key=el.dataset.key, send=el.dataset.send;
+    const bar=document.getElementById(el.id+'-sendbar');
+    const voice=document.getElementById(el.id.replace('draft','voice'));
+    const displayText=I18N[key][LANG]!=null?I18N[key][LANG]:I18N[key]['en'];
+    const sendText=I18N[key][send]!=null?I18N[key][send]:displayText;
+    const mode=el.dataset.mode||'display';
+    const setVoiceMine=()=>{if(voice){voice.textContent=tr('voice.mine');voice.classList.remove('voice-send');}};
+    if(LANG===send){el.innerHTML=displayText;if(bar)bar.style.display='none';el.setAttribute('contenteditable','false');setVoiceMine();return;}
+    if(bar)bar.style.display='';
+    const tag=bar.querySelector('.send-tag'), btn=bar.querySelector('.send-toggle');
+    tag.textContent='📤 '+tr('t.sendsIn').replace('{L}',langName(send))+' · '+tr('t.inYourVoice').replace('{L}',langName(send));
+    if(mode==='display'){
+      el.innerHTML=displayText;el.setAttribute('contenteditable','false');
+      btn.textContent=tr('t.showSend');
+      setVoiceMine();
+    }else{
+      el.innerHTML=sendText;el.setAttribute('contenteditable','true');
+      btn.textContent=tr('t.showMine');
+      if(voice){voice.textContent=tr('voice.inlang').replace('{L}',langName(send));voice.classList.add('voice-send');}
+    }
+  }
+  function toggleSend(id){
+    const el=document.getElementById(id);
+    el.dataset.mode=(el.dataset.mode==='send')?'display':'send';
+    renderDraft(el);
+    if(el.dataset.mode==='send') el.focus();
+  }
+
+  let LANG='ko';
+  function setLang(l){
+    // content language: fall back to English if this language isn't localized yet
+    const cl = (I18N["hero.h1"] && I18N["hero.h1"][l]!=null) ? l : 'en';
+    LANG=cl;
+    document.documentElement.setAttribute('lang',cl);
+    document.querySelectorAll('[data-i18n]').forEach(el=>{
+      const k=el.getAttribute('data-i18n');
+      if(I18N[k]&&I18N[k][cl]!=null) el.innerHTML=I18N[k][cl];
+    });
+    document.querySelectorAll('[data-ph]').forEach(el=>{
+      const k=el.getAttribute('data-ph');
+      if(I18N[k]&&I18N[k][cl]!=null) el.placeholder=I18N[k][cl];
+    });
+    document.querySelectorAll('.excerpt').forEach(renderExcerpt);
+    document.querySelectorAll('.draft-body[data-key]').forEach(renderDraft);
+    const sel=document.getElementById('langSel'); if(sel) sel.value=l;
+  }
+  function toggleTheme(){
+    const html=document.documentElement;
+    const dark=html.getAttribute('data-theme')==='dark';
+    html.setAttribute('data-theme',dark?'light':'dark');
+    document.getElementById('themeBtn').textContent=dark?'☾':'☀';
+  }
+  function toggleIgnored(){
+    document.getElementById('igList').classList.toggle('open');
+    document.getElementById('igToggle').classList.toggle('open');
+  }
+  function refine(bodyId,refineId){
+    const body=document.getElementById(bodyId);
+    const bar=document.getElementById(refineId);
+    const on=bar.classList.toggle('show');
+    body.setAttribute('contenteditable',on?'true':'false');
+    if(on) body.focus();
+  }
+  function aiFlash(el){
+    const t=el.textContent;
+    el.textContent=I18N["refining"][LANG];
+    el.style.opacity=.55;el.style.pointerEvents='none';
+    setTimeout(()=>{el.textContent=t;el.style.opacity=1;el.style.pointerEvents='';},1000);
+  }
+  function approve(id){
+    const c=document.getElementById(id);
+    c.classList.add('done');
+    c.querySelector('.actions').innerHTML='<span style="color:var(--accent);font-weight:640;display:flex;align-items:center;gap:8px">'+I18N["sent"][LANG]+'</span>';
+  }
+  setLang('ko');
+</script>
+</body>
+</html>
